@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Simple Map</title>
+    <meta name="viewport" content="initial-scale=1.0">
+    <meta charset="utf-8">
+    <style>
+    /* Always set the map height explicitly to define the size of the div
+      * element that contains the map. */
+    #map {
+        height: 100%;
+    }
+
+    /* Optional: Makes the sample page fill the window. */
+    html,
+    body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    input {
+        font-size: xx-large;
+        margin-top: 1%;
+    }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+    var map;
+
+    function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: -34.397, lng: 150.644 },
+            zoom: 15,
+            // disableDefaultUI: true,
+            // gestureHandling: 'none',
+            // zoomControl: false
+        });
+
+        var bounds = new google.maps.LatLngBounds();
+        var geocoder = new google.maps.Geocoder();
+        var markers = [];
+        var infoWindow;
+
+        geocoder.geocode({
+            'address': "11030",
+            "componentRestrictions": { "country": "US" }
+        }, function(results, status) {
+            if (status == google.maps.GeocoderStatus.OK) {
+                map.setCenter(results[0].geometry.location);
+                var marker = new google.maps.Marker({
+                    map: map,
+                    position: results[0].geometry.location
+                });
+                bounds.extend(marker.position);
+                markers.push(marker);
+            } else {
+                alert("Geocode was not successful for the following reason: " + status);
+            }
+        });
+
+        var inputBox = document.getElementById('postal_code');
+
+        var controlDiv = document.createElement('DIV');
+        var controlInput = document.createElement('INPUT');
+        controlInput.name = "zip-code";
+        controlInput.type = "text";
+        controlInput.id = "postal-code";
+        controlInput.placeholder = "Enter Zip to find Distance";
+        controlDiv.appendChild(controlInput);
+
+        controlDiv.addEventListener('keydown', function(e) {
+            if (e.keyCode === 13) {
+                if (/^[0-9]{5}(?:-[0-9]{4})?$/.test(controlInput.value)) {
+
+                    if (markers.length > 1) {
+                        markers[1].setMap(null);
+                        markers.pop();
+                        bounds = new google.maps.LatLngBounds();
+                        bounds.extend(markers[0].position);
+                        infoWindow.close();
+                    }
+                    var geocoder = new google.maps.Geocoder();
+
+                    geocoder.geocode({
+                        'address': controlInput.value,
+                        "componentRestrictions": { "country": "US" }
+                    }, function(results, status) {
+                        console.log(results);
+                        if (status == google.maps.GeocoderStatus.OK) {
+                            if (results[0].types[0] === "postal_code") {
+                                var marker = new google.maps.Marker({
+                                    map: map,
+                                    position: results[0].geometry.location
+                                });
+                                markers.push(marker);
+                                bounds.extend(marker.position);
+                                map.fitBounds(bounds);
+
+                                var distance = Math.round(google.maps.geometry.spherical.computeDistanceBetween(markers[0].position, markers[1].position) * 0.000621371);
+
+                                infoWindow = new google.maps.InfoWindow({
+                                    content: '<div style="font-size:32px">Distance is ' + distance + ' miles.</div>',
+                                    position: map.getCenter(),
+                                    maxWidth: 500
+                                });
+                                infoWindow.open(map);
+                            } else {
+                                alert("Not a valid zip code, please try again");
+                            }
+
+                        } else {
+                            alert("Geocode was not successful for the following reason: " + status);
+                        }
+                    });
+                } else {
+                    alert(controlInput.value + " is an invalid zip, please try again.");
+                }
+            }
+        });
+        map.controls[google.maps.ControlPosition.TOP_CENTER].push(controlDiv);
+
+    }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDEp1OLLQAHqWcq4GbwK4rlkuSPCa7L6vg&callback=initMap&libraries=geometry" async defer></script>
+</body>
+
+</html>
